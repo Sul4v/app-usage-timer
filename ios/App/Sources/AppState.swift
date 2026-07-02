@@ -60,11 +60,16 @@ final class AppState: ObservableObject {
             Task { await CapsuleLiveActivity.endAll() }
             return
         }
-        CapsuleLiveActivity.ensureStarted(.init(
-            appNickname: app.nickname,
-            usedMinutes: usage.minutes,
-            limitMinutes: app.limitMinutes
-        ))
+        // startOrUpdate (not ensureStarted): if a capsule is already live but
+        // lagging behind because the extension's updates got throttled, this
+        // snaps it to the accurate on-disk value every time the app opens.
+        Task {
+            await CapsuleLiveActivity.startOrUpdate(.init(
+                appNickname: app.nickname,
+                usedMinutes: usage.minutes,
+                limitMinutes: app.limitMinutes
+            ))
+        }
     }
 
     /// Persist app/limit changes, re-register Screen Time monitoring so the
