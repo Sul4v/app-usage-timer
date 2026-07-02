@@ -31,6 +31,25 @@ final class AppState: ObservableObject {
     func refresh() {
         trackedApps = store.loadTrackedApps()
         today = store.todayUsage()
+        ensureCapsuleActivity()
+    }
+
+    /// Pre-start the Dynamic Island capsule from the app process. The
+    /// DeviceActivity monitor extension can only *update* a running Live
+    /// Activity — the system ignores start requests from extensions — so the
+    /// app starts one showing today's most-used tracked app whenever it's
+    /// foregrounded, and the extension keeps it current from then on.
+    func ensureCapsuleActivity() {
+        guard phase == .main, screenTime.isAuthorized,
+              let app = trackedApps.max(by: {
+                  (today.apps[$0.id]?.minutes ?? 0) < (today.apps[$1.id]?.minutes ?? 0)
+              })
+        else { return }
+        CapsuleLiveActivity.ensureStarted(.init(
+            appNickname: app.nickname,
+            usedMinutes: today.apps[app.id]?.minutes ?? 0,
+            limitMinutes: app.limitMinutes
+        ))
     }
 
     /// Persist app/limit changes, re-register Screen Time monitoring so the
@@ -56,6 +75,7 @@ final class AppState: ObservableObject {
         store.hasCompletedOnboarding = true
         screenTime.scheduleMonitoring(apps: trackedApps)
         phase = .main
+        ensureCapsuleActivity()
         Task { await sync.syncNow() }
     }
 

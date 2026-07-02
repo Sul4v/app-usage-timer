@@ -43,6 +43,18 @@ public enum CapsuleLiveActivity {
         }
     }
 
+    /// Start the capsule if none is running, without touching an existing
+    /// one. Called from the app on foreground: only the app process can
+    /// reliably *request* a Live Activity, so it pre-starts the capsule and
+    /// the monitor extension merely updates it as usage accumulates.
+    public static func ensureStarted(_ state: CapsuleActivityAttributes.ContentState) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled,
+              Activity<CapsuleActivityAttributes>.activities.isEmpty
+        else { return }
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(60 * 60))
+        _ = try? Activity.request(attributes: CapsuleActivityAttributes(), content: content)
+    }
+
     public static func endAll() async {
         for activity in Activity<CapsuleActivityAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
