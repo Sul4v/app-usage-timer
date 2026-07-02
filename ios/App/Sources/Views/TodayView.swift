@@ -10,6 +10,14 @@ struct TodayView: View {
                 VStack(spacing: 24) {
                     header
 
+                    if appState.trackedApps.contains(where: { $0.nickname.wholeMatch(of: /App \d+/) != nil }) {
+                        Card {
+                            Text("Some apps still have placeholder names. Tap a row and give it its real name — widgets, alerts and the reminder screen all use it (Apple doesn't let us read the actual name).")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
                     VStack(spacing: 10) {
                         ForEach(appState.trackedApps) { app in
                             Button {
