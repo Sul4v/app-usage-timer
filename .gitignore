@@ -17,3 +17,4 @@ android/app/build/
 android/local.properties
 android/.idea/
 *.apk
+supabase/.env.local

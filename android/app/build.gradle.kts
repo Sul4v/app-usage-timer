@@ -15,9 +15,10 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        // Fill in to enable accounts + sync (see supabase/README.md).
-        buildConfigField("String", "SUPABASE_URL", "\"\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"\"")
+        // Public client config: the anon key is designed to ship in apps;
+        // row-level security governs all data access.
+        buildConfigField("String", "SUPABASE_URL", "\"https://ubglgtworopygeenbnvb.supabase.co\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViZ2xndHdvcm9weWdlZW5ibnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5ODEyOTksImV4cCI6MjA5ODU1NzI5OX0.q4vUpxgxzLBaV1iZsjZgAXiQKaJETLYd7Z5lFmRLVto\"")
     }
 
     buildTypes {

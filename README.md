@@ -121,9 +121,19 @@ tracked apps to ~8 or fewer.
 permissions (usage access, display-over-other-apps) since Android won't grant
 them from an in-app dialog. The tracking service restarts on boot.
 
-## Enabling sync
+## Sync backend
 
-1. Create a Supabase project, enable email auth, run `supabase/schema.sql`.
+Accounts + sync run on Supabase (email auth, Postgres with row-level
+security) and the repo ships pre-configured against a live project — the
+embedded anon key is public client config by design; RLS restricts every
+user to their own rows. Email sign-up is set to auto-confirm (the free-tier
+mailer is rate-limited); switch on confirmations + custom SMTP before a
+public launch.
+
+To point at your own project instead:
+
+1. Create a Supabase project and apply `supabase/schema.sql`
+   (`supabase link && supabase db push` — it's also in `supabase/migrations/`).
 2. iOS: set `SupabaseURL` / `SupabaseAnonKey` in `ios/project.yml` (Info
    properties) and regenerate; Android: set `SUPABASE_URL` /
    `SUPABASE_ANON_KEY` in `android/app/build.gradle.kts`.
