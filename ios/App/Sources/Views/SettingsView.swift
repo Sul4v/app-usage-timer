@@ -7,11 +7,12 @@ struct SettingsView: View {
     @State private var showPicker = false
     @State private var selection = FamilyActivitySelection()
     @State private var shieldOn = SharedStore.shared.shieldWhenOverLimit
+    @State private var interstitialOn = SharedStore.shared.interstitialEnabled
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Tracked apps") {
+                Section {
                     if appState.screenTime.isAuthorized {
                         LabeledContent("Tracking") {
                             if appState.screenTime.isMonitoring {
@@ -37,10 +38,20 @@ struct SettingsView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                    Toggle("Remind me before opening", isOn: $interstitialOn)
+                        .onChange(of: interstitialOn) { _, on in
+                            SharedStore.shared.interstitialEnabled = on
+                            ShieldController.reconcile()
+                        }
                     Toggle("Block apps when over limit", isOn: $shieldOn)
                         .onChange(of: shieldOn) { _, on in
                             SharedStore.shared.shieldWhenOverLimit = on
+                            ShieldController.reconcile()
                         }
+                } header: {
+                    Text("Tracked apps")
+                } footer: {
+                    Text("“Remind me” shows a screen with today's usage each time you open a tracked app, so you decide with the number in front of you. After you continue, it waits \(SharedStore.shared.graceMinutes) minutes before asking again.")
                 }
 
                 Section {

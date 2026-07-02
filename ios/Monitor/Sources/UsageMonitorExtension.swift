@@ -11,17 +11,16 @@ import UserNotifications
 /// Event names are "<trackedAppUUID>|<minutes>".
 final class UsageMonitorExtension: DeviceActivityMonitor {
     private let store = SharedStore.shared
-    private let managedSettings = ManagedSettingsStore()
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
-        // New day: lift any shield left over from yesterday.
-        managedSettings.shield.applications = nil
+        // New day: re-apply shields for the fresh day (interstitial re-arms,
+        // yesterday's over-limit blocks lift).
+        ShieldController.reconcile()
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
-        managedSettings.shield.applications = nil
         let done = DispatchSemaphore(value: 0)
         Task { await CapsuleLiveActivity.endAll(); done.signal() }
         _ = done.wait(timeout: .now() + 8)
@@ -47,11 +46,9 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
         // completes — then block for the async capsule update below.
         notifyMilestones(app: app, usage: usage)
 
-        if usage.minutes >= app.limitMinutes, store.shieldWhenOverLimit, let token = app.token {
-            var shielded = managedSettings.shield.applications ?? []
-            shielded.insert(token)
-            managedSettings.shield.applications = shielded
-        }
+        // Re-apply shields: re-arms the interstitial once a grace window has
+        // expired, and blocks apps that just crossed their limit.
+        ShieldController.reconcile()
 
         // Drive the Dynamic Island capsule. ActivityKit refuses updates from
         // this extension (unsupportedTarget), so instead ask the server to

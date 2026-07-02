@@ -33,6 +33,7 @@ final class AppState: ObservableObject {
         today = store.todayUsage()
         screenTime.checkAuthorization()
         screenTime.ensureMonitoring(apps: trackedApps)
+        ShieldController.reconcile()
         ensureCapsuleActivity()
         Task { await CapsuleLiveActivity.retryTokenRegistrationIfNeeded() }
     }
@@ -84,6 +85,7 @@ final class AppState: ObservableObject {
         store.saveTrackedApps(stamped)
         trackedApps = stamped
         screenTime.scheduleMonitoring(apps: stamped)
+        ShieldController.reconcile()
         Task { await sync.syncNow() }
     }
 
@@ -95,6 +97,7 @@ final class AppState: ObservableObject {
     func completeOnboarding() {
         store.hasCompletedOnboarding = true
         screenTime.scheduleMonitoring(apps: trackedApps)
+        ShieldController.reconcile()
         phase = .main
         ensureCapsuleActivity()
         Task { await sync.syncNow() }

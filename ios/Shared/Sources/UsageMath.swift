@@ -38,6 +38,12 @@ public enum UsageMath {
         )
     }
 
+    /// UIColor version of `stateColor`, for the shield UI (ManagedSettingsUI
+    /// takes UIColor, not SwiftUI Color).
+    public static func stateUIColor(ratio: Double) -> UIColor {
+        UIColor(stateColor(ratio: ratio))
+    }
+
     public static func formatMinutes(_ minutes: Int) -> String {
         if minutes < 60 { return "\(minutes)m" }
         let h = minutes / 60, m = minutes % 60

@@ -25,6 +25,9 @@ public final class SharedStore: @unchecked Sendable {
         static let deviceID = "deviceID"
         static let capsulePushToken = "capsulePushToken"
         static let registeredPushToken = "registeredPushToken"
+        static let interstitialEnabled = "interstitialEnabled"
+        static let graceMinutes = "graceMinutes"
+        static let graceUntil = "graceUntil"
     }
 
     private init() {
@@ -58,6 +61,33 @@ public final class SharedStore: @unchecked Sendable {
     public var shieldWhenOverLimit: Bool {
         get { defaults.bool(forKey: Key.shieldWhenOverLimit) }
         set { defaults.set(newValue, forKey: Key.shieldWhenOverLimit) }
+    }
+
+    /// Show the "you've used this X today" reminder screen before a tracked
+    /// app opens. Defaults on (registered true once onboarding completes).
+    public var interstitialEnabled: Bool {
+        get { defaults.object(forKey: Key.interstitialEnabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.interstitialEnabled) }
+    }
+
+    /// After tapping "Continue", how long the app stays open before the
+    /// reminder shows again.
+    public var graceMinutes: Int {
+        get { defaults.object(forKey: Key.graceMinutes) as? Int ?? 5 }
+        set { defaults.set(newValue, forKey: Key.graceMinutes) }
+    }
+
+    /// Per-app grace expiry (epoch seconds), keyed by app id. While in grace
+    /// the app is unshielded so the reminder doesn't nag on every switch.
+    public func graceUntil(appID: UUID) -> Date? {
+        let map = defaults.dictionary(forKey: Key.graceUntil) as? [String: Double] ?? [:]
+        return map[appID.uuidString].map { Date(timeIntervalSince1970: $0) }
+    }
+
+    public func setGrace(appID: UUID, until: Date) {
+        var map = defaults.dictionary(forKey: Key.graceUntil) as? [String: Double] ?? [:]
+        map[appID.uuidString] = until.timeIntervalSince1970
+        defaults.set(map, forKey: Key.graceUntil)
     }
 
     public var hasCompletedOnboarding: Bool {
