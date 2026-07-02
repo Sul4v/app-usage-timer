@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# iOS — project is generated from ios/project.yml
+ios/Capsule.xcodeproj/
+ios/App/Info.plist
+ios/Monitor/Info.plist
+ios/Widgets/Info.plist
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.apk
