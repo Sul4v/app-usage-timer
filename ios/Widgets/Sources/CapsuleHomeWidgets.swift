@@ -1,4 +1,5 @@
 import Charts
+import FamilyControls
 import SwiftUI
 import WidgetKit
 
@@ -145,38 +146,40 @@ struct WidgetAppRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        // Icon-led row: real app logo, progress bar, minutes — no text name.
+        // The monogram sits underneath; the system-rendered icon covers it
+        // when iOS agrees to draw tokens in widgets (it may refuse — then the
+        // nickname-initial monogram shows instead).
+        HStack(spacing: 12) {
             ZStack {
                 Circle().fill(Color.primary.opacity(0.06))
                 Text(String(app.nickname.prefix(1)).uppercased())
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
+                if let token = app.token {
+                    Label(token)
+                        .labelStyle(.iconOnly)
+                        .scaleEffect(32.0 / 24.0)
+                }
             }
-            .frame(width: 26, height: 26)
+            .frame(width: 32, height: 32)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(app.nickname)
-                        .font(.footnote.weight(.medium))
-                        .lineLimit(1)
-                    Spacer()
-                    Text(UsageMath.formatMinutes(usage.minutes))
-                        .font(.footnote.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(UsageMath.stateColor(ratio: ratio))
-                    + Text(" / \(UsageMath.formatMinutes(app.limitMinutes))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.06))
+                    Capsule()
+                        .fill(UsageMath.stateColor(ratio: ratio))
+                        .frame(width: geo.size.width * min(max(ratio, 0.02), 1))
                 }
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.primary.opacity(0.06))
-                        Capsule()
-                            .fill(UsageMath.stateColor(ratio: ratio))
-                            .frame(width: geo.size.width * min(max(ratio, 0.02), 1))
-                    }
-                }
-                .frame(height: 5)
             }
+            .frame(height: 6)
+
+            Text(UsageMath.formatMinutes(usage.minutes))
+                .font(.footnote.monospacedDigit().weight(.semibold))
+                .foregroundStyle(UsageMath.stateColor(ratio: ratio))
+            + Text(" / \(UsageMath.formatMinutes(app.limitMinutes))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 }
