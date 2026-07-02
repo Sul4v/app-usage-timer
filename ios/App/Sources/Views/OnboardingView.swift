@@ -120,7 +120,7 @@ struct OnboardingView: View {
                             Card {
                                 HStack(spacing: 12) {
                                     AppIconView(app: app, size: 36)
-                                    Text(app.nickname).font(.body.weight(.medium))
+                                    AppTitleView(app: app).font(.body.weight(.medium))
                                     Spacer()
                                 }
                             }
@@ -221,7 +221,7 @@ struct LimitEditorCard: View {
             VStack(spacing: 14) {
                 HStack(spacing: 12) {
                     AppIconView(app: app, size: 36)
-                    Text(app.nickname).font(.body.weight(.medium))
+                    AppTitleView(app: app).font(.body.weight(.medium))
                     Spacer()
                     Text(UsageMath.formatMinutes(app.limitMinutes))
                         .font(.body.monospacedDigit().weight(.semibold))
@@ -234,6 +234,11 @@ struct LimitEditorCard: View {
                     in: 5...240
                 )
                 .tint(.primary)
+                if app.tokenData != nil {
+                    TextField("Nickname (used in alerts & stats)", text: $app.nickname)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }

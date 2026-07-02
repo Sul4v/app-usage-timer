@@ -172,7 +172,7 @@ struct AppStatRow: View {
             HStack(spacing: 12) {
                 AppIconView(app: app, size: 36)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(app.nickname).font(.body.weight(.medium))
+                    AppTitleView(app: app).font(.body.weight(.medium))
                     Text("avg \(UsageMath.formatMinutes(avg)) on active days")
                         .font(.caption)
                         .foregroundStyle(.secondary)

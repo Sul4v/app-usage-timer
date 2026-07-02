@@ -79,7 +79,7 @@ struct TodayAppCard: View {
                 HStack(spacing: 12) {
                     AppIconView(app: app)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(app.nickname)
+                        AppTitleView(app: app)
                             .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
                         Text("\(usage.opens) open\(usage.opens == 1 ? "" : "s") today")
@@ -114,10 +114,21 @@ struct EditAppSheet: View {
             VStack(spacing: 20) {
                 HStack(spacing: 14) {
                     AppIconView(app: app, size: 48)
-                    TextField("Name", text: $app.nickname)
+                    AppTitleView(app: app)
                         .font(.title3.weight(.medium))
+                    Spacer()
                 }
                 .padding(.top, 8)
+
+                Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Nickname", text: $app.nickname)
+                            .font(.body.weight(.medium))
+                        Text("Apple hides real app names from us, so alerts, stats and sync use this name.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Card {
                     VStack(spacing: 14) {

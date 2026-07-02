@@ -30,9 +30,14 @@ public enum CapsuleLiveActivity {
     /// Start a capsule (from the app) or update the existing one (works from
     /// the monitor extension too — `Activity.request` is unreliable outside
     /// the app process, but updating an already-running activity works).
+    /// Threshold events arrive at most once a minute while a tracked app is
+    /// in use, so ~3.5 quiet minutes means usage stopped: the capsule goes
+    /// stale (dimmed) then, and the app clears it next time it's opened.
+    private static let staleAfter: TimeInterval = 3.5 * 60
+
     public static func startOrUpdate(_ state: CapsuleActivityAttributes.ContentState) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(30 * 60))
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
         if let existing = Activity<CapsuleActivityAttributes>.activities.first {
             await existing.update(content)
             for extra in Activity<CapsuleActivityAttributes>.activities.dropFirst() {
@@ -51,7 +56,7 @@ public enum CapsuleLiveActivity {
         guard ActivityAuthorizationInfo().areActivitiesEnabled,
               Activity<CapsuleActivityAttributes>.activities.isEmpty
         else { return }
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(60 * 60))
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
         _ = try? Activity.request(attributes: CapsuleActivityAttributes(), content: content)
     }
 

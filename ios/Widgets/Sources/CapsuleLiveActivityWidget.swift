@@ -34,18 +34,24 @@ struct CapsuleLiveActivityWidget: Widget {
                 }
             } compactLeading: {
                 Circle()
-                    .fill(UsageMath.stateColor(ratio: context.state.ratio))
+                    .fill(capsuleColor(context))
                     .frame(width: 12, height: 12)
             } compactTrailing: {
                 Text(UsageMath.formatMinutes(context.state.usedMinutes))
                     .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(UsageMath.stateColor(ratio: context.state.ratio))
+                    .foregroundStyle(capsuleColor(context))
             } minimal: {
                 Circle()
-                    .fill(UsageMath.stateColor(ratio: context.state.ratio))
+                    .fill(capsuleColor(context))
                     .frame(width: 12, height: 12)
             }
         }
+    }
+
+    /// Gray out once no usage has been reported for a few minutes — the
+    /// session likely ended and the app will clear the capsule when opened.
+    private func capsuleColor(_ context: ActivityViewContext<CapsuleActivityAttributes>) -> Color {
+        context.isStale ? .gray : UsageMath.stateColor(ratio: context.state.ratio)
     }
 
     private func statusLine(_ state: CapsuleActivityAttributes.ContentState) -> String {

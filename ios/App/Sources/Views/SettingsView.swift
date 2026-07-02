@@ -66,27 +66,6 @@ struct SettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-
-                #if DEBUG
-                Section("Developer") {
-                    Button("Preview capsule (Live Activity)") {
-                        Task {
-                            await CapsuleLiveActivity.startOrUpdate(.init(
-                                appNickname: appState.trackedApps.first?.nickname ?? "Instagram",
-                                usedMinutes: 38,
-                                limitMinutes: 45
-                            ))
-                        }
-                    }
-                    Button("End capsule") {
-                        Task { await CapsuleLiveActivity.endAll() }
-                    }
-                    Button("Reseed sample data") {
-                        SampleData.seed(store: appState.store)
-                        appState.refresh()
-                    }
-                }
-                #endif
             }
             .navigationTitle("Settings")
             .familyActivityPicker(isPresented: $showPicker, selection: $selection)

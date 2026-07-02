@@ -40,6 +40,21 @@ struct UsageBar: View {
     }
 }
 
+/// Real app name when we have a Screen Time token. The system renders the
+/// text — our code can show it but never read it — so notifications and
+/// sync still use the editable nickname.
+struct AppTitleView: View {
+    let app: TrackedApp
+
+    var body: some View {
+        if let token = app.token {
+            Label(token).labelStyle(.titleOnly)
+        } else {
+            Text(app.nickname)
+        }
+    }
+}
+
 /// Real app icon when we have a Screen Time token (system-rendered, opaque
 /// to us), otherwise a neutral monogram circle.
 struct AppIconView: View {

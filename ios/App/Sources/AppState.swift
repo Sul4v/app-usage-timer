@@ -34,20 +34,33 @@ final class AppState: ObservableObject {
         ensureCapsuleActivity()
     }
 
-    /// Pre-start the Dynamic Island capsule from the app process. The
-    /// DeviceActivity monitor extension can only *update* a running Live
-    /// Activity — the system ignores start requests from extensions — so the
-    /// app starts one showing today's most-used tracked app whenever it's
-    /// foregrounded, and the extension keeps it current from then on.
+    /// Keep the Dynamic Island capsule in sync with *recent* usage. Only the
+    /// app process can start a Live Activity (the system ignores requests
+    /// from the monitor extension), so on every foreground:
+    /// - tracked app used in the last 10 minutes → make sure the capsule is
+    ///   up, showing that app; the extension updates it each further minute.
+    /// - nothing recent → end it, so the capsule doesn't squat in the island
+    ///   all day. (iOS gives no "app opened" callback and Live Activities
+    ///   are global, so exact show-only-while-in-app isn't possible.)
     func ensureCapsuleActivity() {
-        guard phase == .main, screenTime.isAuthorized,
-              let app = trackedApps.max(by: {
-                  (today.apps[$0.id]?.minutes ?? 0) < (today.apps[$1.id]?.minutes ?? 0)
-              })
-        else { return }
+        guard phase == .main, screenTime.isAuthorized else { return }
+        let recent = trackedApps
+            .compactMap { app -> (TrackedApp, AppDayUsage, Date)? in
+                guard let usage = today.apps[app.id],
+                      let lastAt = usage.sessions.map(\.end).max()
+                else { return nil }
+                return (app, usage, lastAt)
+            }
+            .max { $0.2 < $1.2 }
+        guard let (app, usage, lastAt) = recent,
+              Date().timeIntervalSince(lastAt) < 10 * 60
+        else {
+            Task { await CapsuleLiveActivity.endAll() }
+            return
+        }
         CapsuleLiveActivity.ensureStarted(.init(
             appNickname: app.nickname,
-            usedMinutes: today.apps[app.id]?.minutes ?? 0,
+            usedMinutes: usage.minutes,
             limitMinutes: app.limitMinutes
         ))
     }
