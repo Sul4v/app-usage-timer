@@ -74,10 +74,15 @@ adb shell pm grant com.sodhera.capsule android.permission.POST_NOTIFICATIONS
 
 **iOS doesn't allow floating overlays over other apps, ever.** The sanctioned
 equivalent is exactly what you suggested: something in the Dynamic Island.
-Capsule keeps one Live Activity alive; the `DeviceActivity` monitor extension
-updates it each time the system reports another minute of use in a tracked
-app. On devices without the island it appears on the Lock Screen / notch
-banner area.
+Capsule keeps one Live Activity alive in the island. iOS forbids a background
+extension from updating a Live Activity directly (it throws
+`unsupportedTarget`), so the capsule is driven by **APNs push**: the
+`DeviceActivity` monitor extension reports each new minute to a Supabase Edge
+Function, which pushes the updated value to the Live Activity via Apple's
+servers. The app itself also corrects the capsule directly whenever it's
+foregrounded. See [supabase/APNS_SETUP.md](supabase/APNS_SETUP.md) — the
+pipeline is deployed and just needs an APNs auth key. On devices without the
+island it appears on the Lock Screen / notch banner area.
 
 **iOS also never tells an app which apps the user picked or their raw usage.**
 The `FamilyActivityPicker` returns opaque tokens — we can *render* the real

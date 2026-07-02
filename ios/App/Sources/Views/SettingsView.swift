@@ -48,12 +48,13 @@ struct SettingsView: View {
                         Text(relative(SharedStore.shared.lastThresholdAt))
                     }
                     if let diag = SharedStore.shared.lastCapsuleDiag {
+                        let ok = diag.result == "pushed" || diag.result == "updated"
                         LabeledContent("Last capsule update") {
                             Text("\(diag.result) · \(UsageMath.formatMinutes(diag.targetMinutes)) · \(relative(diag.at))")
-                                .foregroundStyle(diag.result == "updated" ? UsageMath.green : UsageMath.red)
+                                .foregroundStyle(ok ? UsageMath.green : UsageMath.red)
                                 .multilineTextAlignment(.trailing)
                         }
-                        if diag.result != "updated" {
+                        if !ok {
                             Text(diag.detail)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)

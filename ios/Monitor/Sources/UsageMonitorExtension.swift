@@ -53,24 +53,26 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
             managedSettings.shield.applications = shielded
         }
 
-        // Drive the Dynamic Island / Lock Screen capsule. The system suspends
-        // this extension the moment the callback returns, so a fire-and-forget
-        // Task gets killed before `Activity.update` runs and the capsule
-        // freezes at its last value. Block until the update actually lands.
+        // Drive the Dynamic Island capsule. ActivityKit refuses updates from
+        // this extension (unsupportedTarget), so instead ask the server to
+        // push the new value to our Live Activity via APNs. The extension is
+        // suspended the instant this callback returns, so block until the
+        // network request finishes.
         let done = DispatchSemaphore(value: 0)
         Task {
-            let outcome = await CapsuleLiveActivity.startOrUpdate(.init(
+            let outcome = await CapsulePush.reportUsage(
+                deviceID: self.store.deviceID,
                 appNickname: app.nickname,
                 usedMinutes: usage.minutes,
                 limitMinutes: app.limitMinutes
-            ))
+            )
             self.store.lastCapsuleDiag = SharedStore.CapsuleDiag(
                 at: Date(), targetMinutes: usage.minutes,
-                result: outcome.result, detail: outcome.detail
+                result: outcome.ok ? "pushed" : "push failed", detail: outcome.detail
             )
             done.signal()
         }
-        _ = done.wait(timeout: .now() + 8)
+        _ = done.wait(timeout: .now() + 7)
     }
 
     private func notifyMilestones(app: TrackedApp, usage: AppDayUsage) {

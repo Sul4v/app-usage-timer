@@ -9,9 +9,13 @@ public struct CapsuleActivityAttributes: ActivityAttributes {
         public var appNickname: String
         public var usedMinutes: Int
         public var limitMinutes: Int
-        public var updatedAt: Date
+        /// Unix epoch seconds. A plain Double (not Date) so the APNs
+        /// `content-state` JSON the server sends decodes identically to what
+        /// the app encodes — Date's push decoding is environment-dependent.
+        public var updatedAt: Double
 
-        public init(appNickname: String, usedMinutes: Int, limitMinutes: Int, updatedAt: Date = Date()) {
+        public init(appNickname: String, usedMinutes: Int, limitMinutes: Int,
+                    updatedAt: Double = Date().timeIntervalSince1970) {
             self.appNickname = appNickname
             self.usedMinutes = usedMinutes
             self.limitMinutes = limitMinutes
@@ -27,60 +31,75 @@ public struct CapsuleActivityAttributes: ActivityAttributes {
 }
 
 public enum CapsuleLiveActivity {
-    /// Start a capsule (from the app) or update the existing one (works from
-    /// the monitor extension too — `Activity.request` is unreliable outside
-    /// the app process, but updating an already-running activity works).
-    /// Threshold events arrive at most once a minute while a tracked app is
-    /// in use, so ~3.5 quiet minutes means usage stopped: the capsule goes
-    /// stale (dimmed) then, and the app clears it next time it's opened.
-    private static let staleAfter: TimeInterval = 3.5 * 60
+    /// A push-updated capsule is refreshed by the server every minute of use.
+    /// The stale window is a touch over 2 minutes so a genuinely-ended session
+    /// dims, while normal minute-by-minute pushes keep it fresh.
+    private static let staleAfter: TimeInterval = 135
 
-    /// Outcome of an update attempt, recorded for the Settings diagnostic so
-    /// we can see from the device exactly why the capsule did or didn't move.
+    /// Guards against stacking duplicate token-observer tasks per activity.
+    private static var observedActivityID: String?
+
     public struct UpdateOutcome {
-        public var result: String   // updated / started / disabled / failed
+        public var result: String
         public var detail: String
     }
 
+    /// App-side: correct a live capsule to an exact value right now (a direct
+    /// ActivityKit update works from the app process), or start one. Starting
+    /// always uses a push token so the server can drive it while backgrounded.
     @discardableResult
     public static func startOrUpdate(_ state: CapsuleActivityAttributes.ContentState) async -> UpdateOutcome {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             return UpdateOutcome(result: "disabled", detail: "Live Activities off in Settings")
         }
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
-        let activities = Activity<CapsuleActivityAttributes>.activities
-        if let existing = activities.first {
+        if let existing = Activity<CapsuleActivityAttributes>.activities.first {
+            let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
             await existing.update(content)
-            for extra in activities.dropFirst() {
-                await extra.end(nil, dismissalPolicy: .immediate)
-            }
-            return UpdateOutcome(result: "updated", detail: "\(activities.count) live")
+            observeToken(existing)
+            return UpdateOutcome(result: "updated", detail: "app")
+        }
+        requestActivity(state)
+        return UpdateOutcome(result: "started", detail: "app")
+    }
+
+    /// App-side: ensure a capsule exists (started with a push token), or just
+    /// re-attach token observation if one is already live.
+    public static func ensureStarted(_ state: CapsuleActivityAttributes.ContentState) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        if let existing = Activity<CapsuleActivityAttributes>.activities.first {
+            observeToken(existing)
         } else {
-            // The extension can't see an app-started activity — try to start
-            // one here. If ActivityKit refuses starts from the extension the
-            // thrown error tells us so.
-            do {
-                _ = try Activity.request(attributes: CapsuleActivityAttributes(), content: content)
-                return UpdateOutcome(result: "started", detail: "none were live")
-            } catch {
-                return UpdateOutcome(result: "failed", detail: "\(error)")
+            requestActivity(state)
+        }
+    }
+
+    private static func requestActivity(_ state: CapsuleActivityAttributes.ContentState) {
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
+        guard let activity = try? Activity.request(
+            attributes: CapsuleActivityAttributes(),
+            content: content,
+            pushType: .token
+        ) else { return }
+        observeToken(activity)
+    }
+
+    /// Stream the activity's APNs push token to the server. The token is
+    /// issued asynchronously after `request` and can rotate, so we keep the
+    /// stream open and re-register whenever it changes.
+    private static func observeToken(_ activity: Activity<CapsuleActivityAttributes>) {
+        guard observedActivityID != activity.id else { return }
+        observedActivityID = activity.id
+        Task {
+            for await tokenData in activity.pushTokenUpdates {
+                let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+                SharedStore.shared.capsulePushToken = hex
+                await CapsulePush.registerToken(hex, deviceID: SharedStore.shared.deviceID)
             }
         }
     }
 
-    /// Start the capsule if none is running, without touching an existing
-    /// one. Called from the app on foreground: only the app process can
-    /// reliably *request* a Live Activity, so it pre-starts the capsule and
-    /// the monitor extension merely updates it as usage accumulates.
-    public static func ensureStarted(_ state: CapsuleActivityAttributes.ContentState) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled,
-              Activity<CapsuleActivityAttributes>.activities.isEmpty
-        else { return }
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
-        _ = try? Activity.request(attributes: CapsuleActivityAttributes(), content: content)
-    }
-
     public static func endAll() async {
+        observedActivityID = nil
         for activity in Activity<CapsuleActivityAttributes>.activities {
             await activity.end(nil, dismissalPolicy: .immediate)
         }

@@ -22,6 +22,8 @@ public final class SharedStore: @unchecked Sendable {
         static let lastSyncAt = "lastSyncAt"
         static let lastCapsuleDiag = "lastCapsuleDiag"
         static let lastThresholdAt = "lastThresholdAt"
+        static let deviceID = "deviceID"
+        static let capsulePushToken = "capsulePushToken"
     }
 
     private init() {
@@ -65,6 +67,23 @@ public final class SharedStore: @unchecked Sendable {
     public var lastSyncAt: Date? {
         get { defaults.object(forKey: Key.lastSyncAt) as? Date }
         set { defaults.set(newValue, forKey: Key.lastSyncAt) }
+    }
+
+    /// Stable per-install identifier, keyed to the Live Activity push token on
+    /// the server so the monitor extension can request capsule pushes without
+    /// needing the user to be signed in.
+    public var deviceID: String {
+        if let existing = defaults.string(forKey: Key.deviceID) { return existing }
+        let new = UUID().uuidString
+        defaults.set(new, forKey: Key.deviceID)
+        return new
+    }
+
+    /// Hex push token for the current Live Activity (set by the app once the
+    /// system issues it; read by nothing on-device — the server uses it).
+    public var capsulePushToken: String? {
+        get { defaults.string(forKey: Key.capsulePushToken) }
+        set { defaults.set(newValue, forKey: Key.capsulePushToken) }
     }
 
     /// Diagnostics for the capsule pipeline, written by the monitor extension
