@@ -4,6 +4,7 @@ import WidgetKit
 @main
 struct CapsuleWidgetsBundle: WidgetBundle {
     var body: some Widget {
+        CapsuleTodayWidget()
         CapsuleLiveActivityWidget()
     }
 }

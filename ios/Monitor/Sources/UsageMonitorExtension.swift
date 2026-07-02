@@ -2,6 +2,7 @@ import DeviceActivity
 import Foundation
 import ManagedSettings
 import UserNotifications
+import WidgetKit
 
 /// Runs in its own sandboxed process. The system calls
 /// `eventDidReachThreshold` each time a tracked app crosses one of the
@@ -49,6 +50,9 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
         // Re-apply shields: re-arms the interstitial once a grace window has
         // expired, and blocks apps that just crossed their limit.
         ShieldController.reconcile()
+
+        // Keep home-screen widgets current with the fresh minute.
+        WidgetCenter.shared.reloadTimelines(ofKind: "CapsuleToday")
 
         // Drive the Dynamic Island capsule. ActivityKit refuses updates from
         // this extension (unsupportedTarget), so instead ask the server to

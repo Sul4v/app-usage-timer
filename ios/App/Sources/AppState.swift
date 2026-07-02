@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import WidgetKit
 
 @MainActor
 final class AppState: ObservableObject {
@@ -35,6 +36,7 @@ final class AppState: ObservableObject {
         screenTime.ensureMonitoring(apps: trackedApps)
         ShieldController.reconcile()
         ensureCapsuleActivity()
+        WidgetCenter.shared.reloadTimelines(ofKind: "CapsuleToday")
         Task { await CapsuleLiveActivity.retryTokenRegistrationIfNeeded() }
     }
 
