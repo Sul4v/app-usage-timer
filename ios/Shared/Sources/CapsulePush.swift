@@ -13,8 +13,9 @@ public enum CapsulePush {
         public var detail: String
     }
 
-    public static func registerToken(_ token: String, deviceID: String) async {
-        _ = await post("capsule-register", ["device_id": deviceID, "token": token])
+    @discardableResult
+    public static func registerToken(_ token: String, deviceID: String) async -> Bool {
+        await post("capsule-register", ["device_id": deviceID, "token": token]).ok
     }
 
     /// Ask the server to push an updated capsule to this device. Called from

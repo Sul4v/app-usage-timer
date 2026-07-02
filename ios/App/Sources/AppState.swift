@@ -34,6 +34,7 @@ final class AppState: ObservableObject {
         screenTime.checkAuthorization()
         screenTime.ensureMonitoring(apps: trackedApps)
         ensureCapsuleActivity()
+        Task { await CapsuleLiveActivity.retryTokenRegistrationIfNeeded() }
     }
 
     /// Keep the Dynamic Island capsule in sync with *recent* usage. Only the

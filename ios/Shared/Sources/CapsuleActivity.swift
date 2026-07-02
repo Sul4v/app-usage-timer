@@ -93,8 +93,21 @@ public enum CapsuleLiveActivity {
             for await tokenData in activity.pushTokenUpdates {
                 let hex = tokenData.map { String(format: "%02x", $0) }.joined()
                 SharedStore.shared.capsulePushToken = hex
-                await CapsulePush.registerToken(hex, deviceID: SharedStore.shared.deviceID)
+                if await CapsulePush.registerToken(hex, deviceID: SharedStore.shared.deviceID) {
+                    SharedStore.shared.registeredPushToken = hex
+                }
             }
+        }
+    }
+
+    /// Retry token registration if the last attempt didn't confirm (e.g. the
+    /// token was first issued while offline). Cheap idempotent upsert; called
+    /// on app foreground.
+    public static func retryTokenRegistrationIfNeeded() async {
+        let store = SharedStore.shared
+        guard let token = store.capsulePushToken, token != store.registeredPushToken else { return }
+        if await CapsulePush.registerToken(token, deviceID: store.deviceID) {
+            store.registeredPushToken = token
         }
     }
 

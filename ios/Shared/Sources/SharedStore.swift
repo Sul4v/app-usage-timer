@@ -24,6 +24,7 @@ public final class SharedStore: @unchecked Sendable {
         static let lastThresholdAt = "lastThresholdAt"
         static let deviceID = "deviceID"
         static let capsulePushToken = "capsulePushToken"
+        static let registeredPushToken = "registeredPushToken"
     }
 
     private init() {
@@ -84,6 +85,14 @@ public final class SharedStore: @unchecked Sendable {
     public var capsulePushToken: String? {
         get { defaults.string(forKey: Key.capsulePushToken) }
         set { defaults.set(newValue, forKey: Key.capsulePushToken) }
+    }
+
+    /// The token value most recently *confirmed* registered with the server.
+    /// When this differs from `capsulePushToken` (e.g. registration failed
+    /// while offline) the app retries on next foreground.
+    public var registeredPushToken: String? {
+        get { defaults.string(forKey: Key.registeredPushToken) }
+        set { defaults.set(newValue, forKey: Key.registeredPushToken) }
     }
 
     /// Diagnostics for the capsule pipeline, written by the monitor extension
