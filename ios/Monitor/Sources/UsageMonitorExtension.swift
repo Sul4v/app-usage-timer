@@ -22,7 +22,9 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         managedSettings.shield.applications = nil
-        Task { await CapsuleLiveActivity.endAll() }
+        let done = DispatchSemaphore(value: 0)
+        Task { await CapsuleLiveActivity.endAll(); done.signal() }
+        _ = done.wait(timeout: .now() + 8)
     }
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
@@ -38,15 +40,8 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
         let day = store.recordThreshold(appID: appID, cumulativeMinutes: minutes)
         let usage = day.apps[appID] ?? AppDayUsage()
 
-        // Drive the Dynamic Island / Lock Screen capsule.
-        Task {
-            await CapsuleLiveActivity.startOrUpdate(.init(
-                appNickname: app.nickname,
-                usedMinutes: usage.minutes,
-                limitMinutes: app.limitMinutes
-            ))
-        }
-
+        // Do the synchronous work (shield, notifications) first — it always
+        // completes — then block for the async capsule update below.
         notifyMilestones(app: app, usage: usage)
 
         if usage.minutes >= app.limitMinutes, store.shieldWhenOverLimit, let token = app.token {
@@ -54,6 +49,21 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
             shielded.insert(token)
             managedSettings.shield.applications = shielded
         }
+
+        // Drive the Dynamic Island / Lock Screen capsule. The system suspends
+        // this extension the moment the callback returns, so a fire-and-forget
+        // Task gets killed before `Activity.update` runs and the capsule
+        // freezes at its last value. Block until the update actually lands.
+        let done = DispatchSemaphore(value: 0)
+        Task {
+            await CapsuleLiveActivity.startOrUpdate(.init(
+                appNickname: app.nickname,
+                usedMinutes: usage.minutes,
+                limitMinutes: app.limitMinutes
+            ))
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 8)
     }
 
     private func notifyMilestones(app: TrackedApp, usage: AppDayUsage) {
