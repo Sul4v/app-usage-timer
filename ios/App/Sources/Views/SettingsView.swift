@@ -43,6 +43,32 @@ struct SettingsView: View {
                         }
                 }
 
+                Section {
+                    LabeledContent("Last usage event") {
+                        Text(relative(SharedStore.shared.lastThresholdAt))
+                    }
+                    if let diag = SharedStore.shared.lastCapsuleDiag {
+                        LabeledContent("Last capsule update") {
+                            Text("\(diag.result) · \(UsageMath.formatMinutes(diag.targetMinutes)) · \(relative(diag.at))")
+                                .foregroundStyle(diag.result == "updated" ? UsageMath.green : UsageMath.red)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        if diag.result != "updated" {
+                            Text(diag.detail)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("No capsule update recorded yet — use a tracked app for a full minute.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Capsule diagnostics")
+                } footer: {
+                    Text("“Last usage event” shows Screen Time is reporting; “Last capsule update” shows whether the Dynamic Island capsule is being driven.")
+                }
+
                 Section("Account") {
                     if let session = appState.account.session {
                         LabeledContent("Signed in as", value: session.email)
@@ -90,6 +116,12 @@ struct SettingsView: View {
 
     private var lastSyncText: String {
         guard let date = SharedStore.shared.lastSyncAt else { return "never" }
+        let f = RelativeDateTimeFormatter()
+        return f.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func relative(_ date: Date?) -> String {
+        guard let date else { return "never" }
         let f = RelativeDateTimeFormatter()
         return f.localizedString(for: date, relativeTo: Date())
     }

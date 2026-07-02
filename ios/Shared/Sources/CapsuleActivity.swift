@@ -35,16 +35,36 @@ public enum CapsuleLiveActivity {
     /// stale (dimmed) then, and the app clears it next time it's opened.
     private static let staleAfter: TimeInterval = 3.5 * 60
 
-    public static func startOrUpdate(_ state: CapsuleActivityAttributes.ContentState) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+    /// Outcome of an update attempt, recorded for the Settings diagnostic so
+    /// we can see from the device exactly why the capsule did or didn't move.
+    public struct UpdateOutcome {
+        public var result: String   // updated / started / disabled / failed
+        public var detail: String
+    }
+
+    @discardableResult
+    public static func startOrUpdate(_ state: CapsuleActivityAttributes.ContentState) async -> UpdateOutcome {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            return UpdateOutcome(result: "disabled", detail: "Live Activities off in Settings")
+        }
         let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleAfter))
-        if let existing = Activity<CapsuleActivityAttributes>.activities.first {
+        let activities = Activity<CapsuleActivityAttributes>.activities
+        if let existing = activities.first {
             await existing.update(content)
-            for extra in Activity<CapsuleActivityAttributes>.activities.dropFirst() {
+            for extra in activities.dropFirst() {
                 await extra.end(nil, dismissalPolicy: .immediate)
             }
+            return UpdateOutcome(result: "updated", detail: "\(activities.count) live")
         } else {
-            _ = try? Activity.request(attributes: CapsuleActivityAttributes(), content: content)
+            // The extension can't see an app-started activity — try to start
+            // one here. If ActivityKit refuses starts from the extension the
+            // thrown error tells us so.
+            do {
+                _ = try Activity.request(attributes: CapsuleActivityAttributes(), content: content)
+                return UpdateOutcome(result: "started", detail: "none were live")
+            } catch {
+                return UpdateOutcome(result: "failed", detail: "\(error)")
+            }
         }
     }
 

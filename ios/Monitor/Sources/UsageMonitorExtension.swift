@@ -30,6 +30,9 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
 
+        // Proof-of-life: monitoring delivered an event to us.
+        store.lastThresholdAt = Date()
+
         let parts = event.rawValue.split(separator: "|")
         guard parts.count == 2,
               let appID = UUID(uuidString: String(parts[0])),
@@ -56,11 +59,15 @@ final class UsageMonitorExtension: DeviceActivityMonitor {
         // freezes at its last value. Block until the update actually lands.
         let done = DispatchSemaphore(value: 0)
         Task {
-            await CapsuleLiveActivity.startOrUpdate(.init(
+            let outcome = await CapsuleLiveActivity.startOrUpdate(.init(
                 appNickname: app.nickname,
                 usedMinutes: usage.minutes,
                 limitMinutes: app.limitMinutes
             ))
+            self.store.lastCapsuleDiag = SharedStore.CapsuleDiag(
+                at: Date(), targetMinutes: usage.minutes,
+                result: outcome.result, detail: outcome.detail
+            )
             done.signal()
         }
         _ = done.wait(timeout: .now() + 8)

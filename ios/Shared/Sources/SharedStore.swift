@@ -20,6 +20,8 @@ public final class SharedStore: @unchecked Sendable {
         static let familySelection = "familyActivitySelection"
         static let hasCompletedOnboarding = "hasCompletedOnboarding"
         static let lastSyncAt = "lastSyncAt"
+        static let lastCapsuleDiag = "lastCapsuleDiag"
+        static let lastThresholdAt = "lastThresholdAt"
     }
 
     private init() {
@@ -63,6 +65,40 @@ public final class SharedStore: @unchecked Sendable {
     public var lastSyncAt: Date? {
         get { defaults.object(forKey: Key.lastSyncAt) as? Date }
         set { defaults.set(newValue, forKey: Key.lastSyncAt) }
+    }
+
+    /// Diagnostics for the capsule pipeline, written by the monitor extension
+    /// and shown in Settings so the live behaviour is observable on-device.
+
+    /// When the extension last received *any* usage-threshold event — proves
+    /// the Screen Time monitoring itself is alive.
+    public var lastThresholdAt: Date? {
+        get { defaults.object(forKey: Key.lastThresholdAt) as? Date }
+        set { defaults.set(newValue, forKey: Key.lastThresholdAt) }
+    }
+
+    public struct CapsuleDiag: Codable, Equatable {
+        public var at: Date
+        public var targetMinutes: Int
+        public var result: String
+        public var detail: String
+        public init(at: Date, targetMinutes: Int, result: String, detail: String) {
+            self.at = at; self.targetMinutes = targetMinutes
+            self.result = result; self.detail = detail
+        }
+    }
+
+    /// Outcome of the extension's most recent capsule-update attempt.
+    public var lastCapsuleDiag: CapsuleDiag? {
+        get {
+            guard let data = defaults.data(forKey: Key.lastCapsuleDiag) else { return nil }
+            return try? JSONDecoder().decode(CapsuleDiag.self, from: data)
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Key.lastCapsuleDiag)
+            }
+        }
     }
 
     /// Raw `FamilyActivitySelection` (Codable) so monitoring can be
