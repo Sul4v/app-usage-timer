@@ -57,6 +57,22 @@ final class ScreenTimeService: ObservableObject {
         return selection
     }
 
+    /// Whether the system currently has our daily schedule registered.
+    var isMonitoring: Bool {
+        center.activities.contains(Self.activityName)
+    }
+
+    /// Re-arm monitoring if the system lost it (app reinstall/update clears
+    /// DeviceActivity schedules). Deliberately does nothing while a schedule
+    /// is active: re-registering mid-day resets the accumulated usage that
+    /// threshold events count against, which would stall the day's counting.
+    func ensureMonitoring(apps: [TrackedApp]) {
+        guard isAuthorized, !isMonitoring,
+              apps.contains(where: { $0.token != nil })
+        else { return }
+        scheduleMonitoring(apps: apps)
+    }
+
     /// (Re)register the repeating all-day schedule. DeviceActivity only tells
     /// us when *cumulative* usage crosses a pre-registered threshold, so we
     /// register a ladder of thresholds per app: every minute near and below

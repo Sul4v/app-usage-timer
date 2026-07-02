@@ -18,8 +18,8 @@ final class AppState: ObservableObject {
         #if targetEnvironment(simulator)
         SampleData.seedIfNeeded(store: store)
         #endif
-        refresh()
         screenTime.checkAuthorization()
+        refresh()
         phase = initialPhase()
     }
 
@@ -31,6 +31,8 @@ final class AppState: ObservableObject {
     func refresh() {
         trackedApps = store.loadTrackedApps()
         today = store.todayUsage()
+        screenTime.checkAuthorization()
+        screenTime.ensureMonitoring(apps: trackedApps)
         ensureCapsuleActivity()
     }
 

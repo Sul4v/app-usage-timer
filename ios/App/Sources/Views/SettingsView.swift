@@ -13,6 +13,18 @@ struct SettingsView: View {
             List {
                 Section("Tracked apps") {
                     if appState.screenTime.isAuthorized {
+                        LabeledContent("Tracking") {
+                            if appState.screenTime.isMonitoring {
+                                Text("Active").foregroundStyle(UsageMath.green)
+                            } else if appState.trackedApps.contains(where: { $0.tokenData != nil }) {
+                                Button("Inactive — tap to restart") {
+                                    appState.screenTime.scheduleMonitoring(apps: appState.trackedApps)
+                                }
+                                .foregroundStyle(UsageMath.red)
+                            } else {
+                                Text("No apps selected").foregroundStyle(.secondary)
+                            }
+                        }
                         Button("Change tracked apps") {
                             selection = appState.screenTime.savedSelection()
                             showPicker = true
